@@ -2,6 +2,7 @@
 
 `define FIFO_LEN 8; //MUST BE A POWER OF TWO, OR ELSE CIRCULAR ADDITION OF POINTERS DOES NOT WORK WITH OVERFLOW
 `define PTR_LEN $clog2(`FIFO_LEN);
+`define testbenching
 
 module circular_buffer(
     //i/o
@@ -14,6 +15,11 @@ module circular_buffer(
     output [2:0] dout, //data that leaves when rd is high
     output empty,
     output full
+
+    `ifdef testbenching
+        ,output [7:0][2:0] bufferOut,
+        output [2:0] wr_ptrOut, rd_ptrOut
+    `endif
 );
     //registers, comb, and ff's
     logic [7:0][2:0] buffer;
@@ -23,6 +29,12 @@ module circular_buffer(
 
     assign wr_en = wr & ~full;
     assign rd_en = rd & ~empty;
+
+    `ifdef testbenching
+        assign bufferOut = buffer;
+        assign wr_ptrOut = wr_ptr;
+        assign rd_ptrOut = rd_ptr;
+    `endif
 
     always_comb begin //or always @(*)
         //default vars:
@@ -44,6 +56,9 @@ module circular_buffer(
                     if (next_wr_ptr == rd_ptr) begin
                         next_full = 1;
                     end
+                    else begin //successful write in the absense of a read:
+                        next_empty = 0;
+                    end
                 end
 
             end
@@ -56,6 +71,9 @@ module circular_buffer(
                     next_rd_ptr = rd_ptr + 1;
                     if (next_rd_ptr == wr_ptr) begin
                         next_empty = 1;
+                    end
+                    else begin //successful read in the absence of a write:
+                        next_full = 0;
                     end
                 end
             end

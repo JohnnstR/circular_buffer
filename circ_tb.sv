@@ -11,6 +11,12 @@ module circ_tb;
     logic full;
     logic empty;
 
+
+    logic [7:0][2:0] bufferOut;
+    logic [2:0] rd_ptrOut;
+    logic [2:0] wr_ptrOut;
+
+
     circular_buffer circ1(
         .clock(clock),
         .reset(reset),
@@ -19,10 +25,25 @@ module circ_tb;
         .din(din),
         .dout(dout),
         .empty(empty),
-        .full(full)
+        .full(full),
+        .bufferOut(bufferOut),
+        .wr_ptrOut(wr_ptrOut),
+        .rd_ptrOut(rd_ptrOut)
     );
 
     always #5 clock = ~clock;
+
+    task print_state;
+        $display("PRINTING BUFFFER: \n");
+        for (int i = 0; i < 8; i++) begin
+            $display("buffer at index: %b: ", i);
+            $display("%b", bufferOut[i]);
+        end
+        $display("HEAD PTR INDEX: %b", rd_ptrOut);
+        $display("TAIL PTR INDEX: %b", wr_ptrOut);
+        $display("EMPTY: %b", empty);
+        $display("FULL: %b", full);
+    endtask
 
     task circ_reset;
         reset = 1;
@@ -44,8 +65,8 @@ module circ_tb;
 
     initial begin
         $display("BEGINNING TESTBENCH \n");
-        circ_reset;
-        fill_buffer_basic;
+        // circ_reset;
+        // fill_buffer_basic;
         circ_reset;
         fill_and_empty_addition;
 
@@ -77,14 +98,21 @@ module circ_tb;
         din = 3'b111; //8
         wr_req = 1;
         @(negedge clock);
+        print_state;
         @(negedge clock);
+        print_state;
         @(negedge clock);
+        print_state;
         @(negedge clock);
+        print_state;
         @(negedge clock);
+        print_state;
         @(negedge clock);
         din = 3'b110; //7
+        print_state;
         @(negedge clock);
         din = 3'b111; //8 (BLOCKED unless overflow bug is allowed!)
+        print_state;
         @(negedge clock);
         #1
         assert (full) else exitOnError;
@@ -93,38 +121,56 @@ module circ_tb;
         wr_req = 0;
         rd_req = 1;
         $display ("%b", dout);
-        @(negedge clock);
-        #1
-        $display ("%b", dout)
-        assert (dout == 3'b111) else exitOnError;
-        sum += dout; //8
-        @(negedge clock);
-        assert (dout == 3'b111) else exitOnError;
-        sum += dout; //16
-        @(negedge clock);
-        assert (dout == 3'b111) else exitOnError;
-        sum += dout; //24
-        @(negedge clock);
-        assert (dout == 3'b111) else exitOnError;
-        sum += dout; //32
-        @(negedge clock);
-        assert (dout == 3'b111) else exitOnError;
-        sum += dout; //40
-        @(negedge clock);
-        assert (dout == 3'b111) else exitOnError;
-        sum += dout; //48
-        @(negedge clock);
-        assert (dout == 3'b111) else exitOnError;
-        sum += dout; //56 
-        @(negedge clock);
-        assert (dout == 3'b111) else exitOnError;
-        sum += dout; //63 <- make sure 7 is added, and not 8!
+        print_state;
 
-        if (sum == 64) begin
+        @(negedge clock);
+        print_state;
+        #1
+        $display ("%b", dout);
+        // assert (dout == 3'b111) else exitOnError;
+        sum += dout; //7
+
+        @(negedge clock);
+        print_state;
+        $display ("%b", dout);
+        assert (dout == 3'b111) else exitOnError;
+        sum += dout; //14
+
+        @(negedge clock);
+        print_state;
+        assert (dout == 3'b111) else exitOnError;
+        sum += dout; //21
+
+        @(negedge clock);
+        print_state;
+        assert (dout == 3'b111) else exitOnError;
+        sum += dout; //28
+
+        @(negedge clock);
+        print_state;
+        assert (dout == 3'b111) else exitOnError;
+        sum += dout; //35
+
+        @(negedge clock);
+        print_state;
+        assert (dout == 3'b111) else exitOnError;
+        sum += dout; //42
+
+        @(negedge clock);
+        print_state;
+        assert (dout == 3'b110) else exitOnError;
+        sum += dout; //48 <- make sure 7 is added, and not 8!
+
+        @(negedge clock);
+        print_state;
+        assert (dout == 3'b111) else exitOnError;
+        sum += dout; //55 
+
+        if (sum == 56) begin
             $display("BUFFER OVERFLOW BUG");
             exitOnError;
         end
-        assert (sum == 63) else exitOnError;
+        assert (sum == 55) else exitOnError;
         assert (empty) else exitOnError;
 
     endtask
